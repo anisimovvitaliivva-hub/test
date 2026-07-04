@@ -58,3 +58,42 @@ def test_llm_failure_falls_back_to_rule_based(monkeypatch):
     # Unreachable localhost port: polish must fail soft, not raise.
     cfg = FormatConfig(llm_enabled=True, llm_url="http://127.0.0.1:1", llm_timeout=0.2)
     assert format_text("hello world", cfg) == "Hello world"
+
+
+def test_polish_that_switches_language_is_rejected(monkeypatch):
+    import flowlocal.formatter as f
+
+    monkeypatch.setattr(f, "_llm_generate", lambda prompt, cfg: "Hello world, how are you?")
+    cfg = FormatConfig(llm_enabled=True)
+    out = format_text("привет мир как дела", cfg)
+    assert out == "Привет мир как дела"  # rule-based result, translation discarded
+
+
+def test_polish_in_same_language_is_kept(monkeypatch):
+    import flowlocal.formatter as f
+
+    monkeypatch.setattr(f, "_llm_generate", lambda prompt, cfg: "Привет, мир! Как дела?")
+    cfg = FormatConfig(llm_enabled=True)
+    assert format_text("привет мир как дела", cfg) == "Привет, мир! Как дела?"
+
+
+def test_spoken_translate_command(monkeypatch):
+    import flowlocal.formatter as f
+
+    prompts = []
+
+    def fake(prompt, cfg):
+        prompts.append(prompt)
+        return "Hello world"
+
+    monkeypatch.setattr(f, "_llm_generate", fake)
+    cfg = FormatConfig(llm_enabled=True)
+    out = format_text("Переведи на английский, привет мир", cfg)
+    assert out == "Hello world"
+    assert "Translate" in prompts[0]
+
+
+def test_translate_command_inert_without_llm():
+    cfg = FormatConfig(llm_enabled=False)
+    out = format_text("переведи на английский привет мир", cfg)
+    assert "переведи" in out.lower()  # phrase passes through untouched

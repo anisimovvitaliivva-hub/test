@@ -65,10 +65,24 @@ def _capitalize(text: str) -> str:
     return _SENTENCE_START_RE.sub(lambda m: m.group(1) + m.group(2).upper(), text)
 
 
+# Spoken at the start of an utterance, asks for translation instead of
+# plain cleanup. Only active when the LLM stage is enabled.
+_TRANSLATE_RE = re.compile(
+    r"^\s*(?:переведи на английский|translate to english)[,.:!]?\s+",
+    re.IGNORECASE | re.UNICODE,
+)
+
+
 def format_text(text: str, cfg: FormatConfig) -> str:
     """Rule-based cleanup; optionally polished by a localhost LLM."""
     if not text:
         return ""
+    translate = False
+    if cfg.llm_enabled:
+        m = _TRANSLATE_RE.match(text)
+        if m:
+            translate = True
+            text = text[m.end():]
     text = _apply_commands(text)
     if cfg.remove_fillers:
         text = _FILLER_RE.sub("", text)
@@ -76,25 +90,49 @@ def format_text(text: str, cfg: FormatConfig) -> str:
     if cfg.capitalize:
         text = _capitalize(text)
     if cfg.llm_enabled and text:
-        text = _llm_polish(text, cfg)
+        text = _llm_translate(text, cfg) if translate else _llm_polish(text, cfg)
     return text
 
 
-_LLM_PROMPT = (
+_POLISH_PROMPT = (
     "You clean up dictated speech-to-text output. Fix punctuation, grammar, "
     "word agreement and obvious speech-recognition errors (wrong but "
     "similar-sounding words) so the text reads the way the speaker intended. "
-    "Keep the original language and meaning; do not add new content, do not "
-    "answer questions in the text, do not comment. Return only the corrected "
-    "text.\n\nText: {text}"
+    "CRITICAL: reply in the SAME language as the text — if the text is "
+    "Russian, your entire reply must be Russian. Never translate. Do not add "
+    "new content, do not answer questions in the text, do not comment. "
+    "Return only the corrected text.\n\nText: {text}"
+)
+
+_TRANSLATE_PROMPT = (
+    "Translate the following dictated text to natural English. Fix obvious "
+    "speech-recognition errors while translating. Return only the "
+    "translation, nothing else.\n\nText: {text}"
 )
 
 
-def _llm_polish(text: str, cfg: FormatConfig) -> str:
+def _cyrillic_ratio(text: str) -> float:
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return 0.0
+    cyr = sum(1 for c in letters if "Ѐ" <= c <= "ӿ")
+    return cyr / len(letters)
+
+
+def _same_script(original: str, candidate: str) -> bool:
+    """True when both texts are written in the same script.
+
+    Guards against small local LLMs that ignore "keep the language"
+    and translate the utterance instead of cleaning it.
+    """
+    return abs(_cyrillic_ratio(original) - _cyrillic_ratio(candidate)) < 0.5
+
+
+def _llm_generate(prompt: str, cfg: FormatConfig) -> str | None:
     payload = json.dumps(
         {
             "model": cfg.llm_model,
-            "prompt": _LLM_PROMPT.format(text=text),
+            "prompt": prompt,
             "stream": False,
             "options": {"temperature": 0.0},
         }
@@ -107,7 +145,18 @@ def _llm_polish(text: str, cfg: FormatConfig) -> str:
     try:
         with urllib.request.urlopen(req, timeout=cfg.llm_timeout) as resp:
             result = json.loads(resp.read())
-        polished = result.get("response", "").strip()
-        return polished or text
+        return result.get("response", "").strip() or None
     except (urllib.error.URLError, TimeoutError, json.JSONDecodeError, OSError):
+        return None
+
+
+def _llm_polish(text: str, cfg: FormatConfig) -> str:
+    polished = _llm_generate(_POLISH_PROMPT.format(text=text), cfg)
+    if polished is None or not _same_script(text, polished):
         return text
+    return polished
+
+
+def _llm_translate(text: str, cfg: FormatConfig) -> str:
+    translated = _llm_generate(_TRANSLATE_PROMPT.format(text=text), cfg)
+    return translated if translated is not None else text
