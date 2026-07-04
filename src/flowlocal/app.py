@@ -14,7 +14,7 @@ import threading
 
 import numpy as np
 
-from .audio import Recorder, is_speech
+from .audio import Recorder, is_speech, rms
 from .config import Config
 from .formatter import format_text
 from .history import History
@@ -65,8 +65,13 @@ class App:
                 log.exception("failed to process utterance")
 
     def _process(self, audio: np.ndarray) -> None:
-        if not is_speech(audio):
-            log.info("no speech detected, skipping")
+        if not is_speech(audio, self.cfg.audio.speech_threshold):
+            log.info(
+                "no speech detected, skipping (rms %.5f <= threshold %.4f; "
+                "run `flowlocal --mic-test` to diagnose)",
+                rms(audio),
+                self.cfg.audio.speech_threshold,
+            )
             return
         raw = self._transcriber.transcribe(audio)
         if not raw:

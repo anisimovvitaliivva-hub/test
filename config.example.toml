@@ -12,6 +12,7 @@ mode = "hold"                 # "hold" = push-to-talk, "toggle" = press twice
 sample_rate = 16000
 # device = "pipewire"         # `python -m sounddevice` lists devices
 max_seconds = 120.0
+speech_threshold = 0.004       # RMS gate; lower it if your mic is quiet (--mic-test shows levels)
 
 [asr]
 model = "small"               # tiny/base/small/medium/large-v3, *-turbo, or a local dir

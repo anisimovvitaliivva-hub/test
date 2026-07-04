@@ -27,6 +27,7 @@ class AudioConfig:
     sample_rate: int = 16000  # Whisper native rate
     device: str | None = None  # None = system default input
     max_seconds: float = 120.0  # hard cap per utterance
+    speech_threshold: float = 0.004  # RMS below this = silence, skip ASR
 
 
 @dataclass

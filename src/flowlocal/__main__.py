@@ -21,6 +21,10 @@ def main(argv: list[str] | None = None) -> int:
         help=f"path to config.toml (default: {DEFAULT_CONFIG_PATH})",
     )
     parser.add_argument("-v", "--verbose", action="store_true", help="debug logging")
+    parser.add_argument(
+        "--mic-test", action="store_true",
+        help="list audio devices, record 3s and report levels, then exit",
+    )
     parser.add_argument("--version", action="version", version=f"flowlocal {__version__}")
     args = parser.parse_args(argv)
 
@@ -35,6 +39,12 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as exc:
         print(f"config error: {exc}", file=sys.stderr)
         return 2
+
+    if args.mic_test:
+        from .audio import mic_test
+
+        mic_test(cfg.audio)
+        return 0
 
     from .app import App
 
