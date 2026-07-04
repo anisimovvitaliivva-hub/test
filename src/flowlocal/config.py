@@ -39,11 +39,12 @@ class HotkeyConfig:
 
 @dataclass
 class AsrConfig:
+    backend: str = "faster-whisper"  # "faster-whisper" | "mlx" (Apple Silicon GPU)
     model: str = "small"  # any faster-whisper model name or local CTranslate2 dir
     device: str = "auto"  # "auto" | "cpu" | "cuda"
     compute_type: str = "default"  # e.g. "int8", "float16"
     language: str | None = None  # None = autodetect (handles code-switching per utterance)
-    beam_size: int = 5
+    beam_size: int = 1  # greedy decoding: latency matters more than the last 1% accuracy
 
 
 @dataclass
@@ -112,6 +113,8 @@ def load_config(path: Path | None = None) -> Config:
 
 
 def validate(cfg: Config) -> None:
+    if cfg.asr.backend not in ("faster-whisper", "mlx"):
+        raise ConfigError(f"asr.backend must be 'faster-whisper' or 'mlx', got {cfg.asr.backend!r}")
     if cfg.hotkey.mode not in ("hold", "toggle"):
         raise ConfigError(f"hotkey.mode must be 'hold' or 'toggle', got {cfg.hotkey.mode!r}")
     if cfg.output.method not in ("auto", "type", "clipboard", "stdout"):

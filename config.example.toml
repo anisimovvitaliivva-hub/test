@@ -15,11 +15,12 @@ max_seconds = 120.0
 speech_threshold = 0.004       # RMS gate; lower it if your mic is quiet (--mic-test shows levels)
 
 [asr]
+backend = "faster-whisper"    # "mlx" = Apple Silicon GPU, needs: pip install ".[mlx]"
 model = "small"               # tiny/base/small/medium/large-v3, *-turbo, or a local dir
-device = "auto"               # "cpu" | "cuda" | "auto"
-compute_type = "default"      # "int8" is a good CPU choice
-# language = "ru"             # unset = autodetect per utterance
-beam_size = 5
+device = "auto"               # "cpu" | "cuda" | "auto" (faster-whisper only)
+compute_type = "default"      # "int8" is a good CPU choice (faster-whisper only)
+# language = "ru"             # unset = autodetect; fixing it skips detection (faster)
+beam_size = 1                 # 1 = greedy decoding, fastest; 5 = slower, slightly better
 
 [format]
 remove_fillers = true

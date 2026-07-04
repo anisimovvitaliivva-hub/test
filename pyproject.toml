@@ -18,6 +18,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=7"]
+mlx = ["mlx-whisper>=0.4"]  # Apple Silicon GPU backend
 
 [project.scripts]
 flowlocal = "flowlocal.__main__:main"

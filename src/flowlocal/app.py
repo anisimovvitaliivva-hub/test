@@ -11,6 +11,7 @@ from __future__ import annotations
 import logging
 import queue
 import threading
+import time
 
 import numpy as np
 
@@ -73,12 +74,15 @@ class App:
                 self.cfg.audio.speech_threshold,
             )
             return
+        t0 = time.monotonic()
         raw = self._transcriber.transcribe(audio)
+        asr_s = time.monotonic() - t0
         if not raw:
-            log.info("empty transcription, skipping")
+            log.info("empty transcription, skipping (asr %.2fs)", asr_s)
             return
         text = format_text(raw, self.cfg.format)
-        log.info("-> %r", text)
+        log.info("-> %r (asr %.2fs for %.1fs of audio)", text, asr_s,
+                 audio.size / self.cfg.audio.sample_rate)
         deliver(text, self.cfg.output)
         self.history.record(raw, text)
 
