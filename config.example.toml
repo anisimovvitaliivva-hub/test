@@ -1,0 +1,35 @@
+# flowlocal configuration.
+# Copy to ~/.config/flowlocal/config.toml and edit.
+# Every key is optional — these are the defaults.
+
+[hotkey]
+combo = "<ctrl>+<alt>+space"  # pynput syntax; e.g. "<f9>" for a single key
+mode = "hold"                 # "hold" = push-to-talk, "toggle" = press twice
+
+[audio]
+sample_rate = 16000
+# device = "pipewire"         # `python -m sounddevice` lists devices
+max_seconds = 120.0
+
+[asr]
+model = "small"               # tiny/base/small/medium/large-v3, *-turbo, or a local dir
+device = "auto"               # "cpu" | "cuda" | "auto"
+compute_type = "default"      # "int8" is a good CPU choice
+# language = "ru"             # unset = autodetect per utterance
+beam_size = 5
+
+[format]
+remove_fillers = true
+capitalize = true
+llm_enabled = false           # optional polish via local Ollama
+llm_url = "http://127.0.0.1:11434"  # localhost only — remote URLs are rejected
+llm_model = "llama3.2:3b"
+llm_timeout = 10.0
+
+[output]
+method = "auto"               # "auto" | "type" | "clipboard" | "stdout"
+type_interval = 0.005
+
+[history]
+enabled = false               # opt-in; stored only in a local SQLite file
+# path = "/home/me/.local/share/flowlocal/history.db"
