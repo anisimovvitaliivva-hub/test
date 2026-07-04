@@ -81,9 +81,12 @@ def format_text(text: str, cfg: FormatConfig) -> str:
 
 
 _LLM_PROMPT = (
-    "You clean up dictated text. Fix punctuation and obvious transcription "
-    "errors. Keep the language, meaning and wording; do not add or answer "
-    "anything. Return only the cleaned text.\n\nText: {text}"
+    "You clean up dictated speech-to-text output. Fix punctuation, grammar, "
+    "word agreement and obvious speech-recognition errors (wrong but "
+    "similar-sounding words) so the text reads the way the speaker intended. "
+    "Keep the original language and meaning; do not add new content, do not "
+    "answer questions in the text, do not comment. Return only the corrected "
+    "text.\n\nText: {text}"
 )
 
 
