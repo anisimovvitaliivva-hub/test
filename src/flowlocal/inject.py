@@ -124,4 +124,13 @@ def deliver(text: str, cfg: OutputConfig) -> None:
     if _type_keystrokes(text, cfg.type_interval):
         return
     # Last resort so the dictation is never silently lost.
+    if sys.platform == "darwin":
+        print(
+            "flowlocal: could not type into the active window. On macOS this "
+            "usually means the terminal is missing the Accessibility permission: "
+            "System Settings > Privacy & Security > Accessibility, enable your "
+            "terminal app, then fully restart it (Cmd+Q).",
+            file=sys.stderr,
+            flush=True,
+        )
     print(text, file=sys.stderr, flush=True)
