@@ -55,7 +55,12 @@ def _type_keystrokes(text: str, interval: float) -> bool:
 
 
 def _clipboard_get() -> str | None:
-    for cmd in (["wl-paste", "--no-newline"], ["xclip", "-selection", "clipboard", "-o"]):
+    commands = [
+        ["wl-paste", "--no-newline"],
+        ["xclip", "-selection", "clipboard", "-o"],
+        ["pbpaste"],  # macOS
+    ]
+    for cmd in commands:
         if shutil.which(cmd[0]):
             try:
                 out = subprocess.run(cmd, check=True, capture_output=True, timeout=5)
@@ -70,6 +75,8 @@ def _clipboard_set(text: str) -> bool:
         return _run(["wl-copy"], input_text=text)
     if shutil.which("xclip"):
         return _run(["xclip", "-selection", "clipboard"], input_text=text)
+    if shutil.which("pbcopy"):  # macOS
+        return _run(["pbcopy"], input_text=text)
     return False
 
 
@@ -88,7 +95,8 @@ def _paste_via_clipboard(text: str) -> bool:
             from pynput.keyboard import Controller, Key
 
             kb = Controller()
-            with kb.pressed(Key.ctrl):
+            paste_mod = Key.cmd if sys.platform == "darwin" else Key.ctrl
+            with kb.pressed(paste_mod):
                 kb.press("v")
                 kb.release("v")
             ok = True

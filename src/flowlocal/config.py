@@ -31,8 +31,8 @@ class AudioConfig:
 
 @dataclass
 class HotkeyConfig:
-    # pynput syntax, e.g. "<ctrl>+<alt>+space" or a single key like "<f9>"
-    combo: str = "<ctrl>+<alt>+space"
+    # pynput syntax, e.g. "<ctrl>+<alt>+<space>" or a single key like "<f9>"
+    combo: str = "<ctrl>+<alt>+<space>"
     mode: str = "hold"  # "hold" (push-to-talk) or "toggle"
 
 

@@ -40,6 +40,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         App(cfg).run()
+    except ConfigError as exc:
+        print(f"config error: {exc}", file=sys.stderr)
+        return 2
     except KeyboardInterrupt:
         pass
     return 0

@@ -12,7 +12,23 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
-from .config import HotkeyConfig
+from .config import ConfigError, HotkeyConfig
+
+
+def normalize_combo(combo: str) -> str:
+    """Accept bare named keys: "ctrl+alt+space" -> "<ctrl>+<alt>+<space>".
+
+    pynput's HotKey.parse only understands single characters or <named>
+    keys; users (and an earlier version of our own default config)
+    naturally write "space" without the brackets.
+    """
+    parts = []
+    for part in combo.split("+"):
+        part = part.strip()
+        if len(part) > 1 and not (part.startswith("<") and part.endswith(">")):
+            part = f"<{part.lower()}>"
+        parts.append(part)
+    return "+".join(parts)
 
 
 class HotkeyListener:
@@ -23,18 +39,21 @@ class HotkeyListener:
         self.cfg = cfg
         self.on_start = on_start
         self.on_stop = on_stop
-        self._combo = {
-            self._canonical(k)
-            for k in keyboard.HotKey.parse(cfg.combo)
-        }
-        self._pressed: set = set()
-        self._active = False  # recording in progress
         self._listener = keyboard.Listener(
             on_press=self._on_press, on_release=self._on_release
         )
-
-    def _canonical(self, key):
-        return self._listener.canonical(key) if self._listener else key
+        combo = normalize_combo(cfg.combo)
+        try:
+            self._combo = {
+                self._listener.canonical(k) for k in keyboard.HotKey.parse(combo)
+            }
+        except ValueError as exc:
+            raise ConfigError(
+                f"cannot parse hotkey.combo {cfg.combo!r}: unknown key {exc}. "
+                "Use pynput syntax, e.g. \"<ctrl>+<alt>+<space>\" or \"<f9>\"."
+            ) from exc
+        self._pressed: set = set()
+        self._active = False  # recording in progress
 
     def _on_press(self, key) -> None:
         key = self._listener.canonical(key)

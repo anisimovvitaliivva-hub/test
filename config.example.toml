@@ -3,7 +3,9 @@
 # Every key is optional — these are the defaults.
 
 [hotkey]
-combo = "<ctrl>+<alt>+space"  # pynput syntax; e.g. "<f9>" for a single key
+combo = "<ctrl>+<alt>+<space>"  # pynput syntax; e.g. "<f9>" for a single key
+# macOS: Ctrl+Option+Space may be taken by "Select next input source" —
+# disable it in System Settings > Keyboard > Shortcuts, or pick e.g. "<f9>"
 mode = "hold"                 # "hold" = push-to-talk, "toggle" = press twice
 
 [audio]
