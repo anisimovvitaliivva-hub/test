@@ -67,22 +67,48 @@ def _capitalize(text: str) -> str:
 
 # Spoken at the start of an utterance, asks for translation instead of
 # plain cleanup. Only active when the LLM stage is enabled.
+_TARGET_LANGUAGES = {
+    "английский": "English", "english": "English",
+    "испанский": "Spanish", "spanish": "Spanish",
+    "немецкий": "German", "german": "German",
+    "французский": "French", "french": "French",
+    "итальянский": "Italian", "italian": "Italian",
+    "китайский": "Chinese", "chinese": "Chinese",
+    "японский": "Japanese", "japanese": "Japanese",
+    "украинский": "Ukrainian", "ukrainian": "Ukrainian",
+    "русский": "Russian", "russian": "Russian",
+}
 _TRANSLATE_RE = re.compile(
-    r"^\s*(?:переведи на английский|translate to english)[,.:!]?\s+",
+    r"^\s*(?:"
+    r"переведи(?:\s+(?:фразу|текст|это))?\s+на\s+(?P<ru>\w+)"
+    r"|translate(?:\s+(?:this|the\s+phrase|the\s+text))?\s+(?:in)?to\s+(?P<en>\w+)"
+    r")[,.:!]?\s+",
     re.IGNORECASE | re.UNICODE,
 )
+
+
+def _translation_request(text: str) -> tuple[str, str] | None:
+    """If the utterance starts with a translate command, return
+    (target language in English, remaining text); otherwise None."""
+    m = _TRANSLATE_RE.match(text)
+    if not m:
+        return None
+    lang_word = (m.group("ru") or m.group("en") or "").lower()
+    target = _TARGET_LANGUAGES.get(lang_word)
+    if target is None:
+        return None  # unknown language name: treat as normal dictation
+    return target, text[m.end():]
 
 
 def format_text(text: str, cfg: FormatConfig) -> str:
     """Rule-based cleanup; optionally polished by a localhost LLM."""
     if not text:
         return ""
-    translate = False
+    target = None
     if cfg.llm_enabled:
-        m = _TRANSLATE_RE.match(text)
-        if m:
-            translate = True
-            text = text[m.end():]
+        request = _translation_request(text)
+        if request:
+            target, text = request
     text = _apply_commands(text)
     if cfg.remove_fillers:
         text = _FILLER_RE.sub("", text)
@@ -90,7 +116,10 @@ def format_text(text: str, cfg: FormatConfig) -> str:
     if cfg.capitalize:
         text = _capitalize(text)
     if cfg.llm_enabled and text:
-        text = _llm_translate(text, cfg) if translate else _llm_polish(text, cfg)
+        if target:
+            text = _llm_translate(text, target, cfg)
+        elif cfg.llm_polish:
+            text = _llm_polish(text, cfg)
     return text
 
 
@@ -105,7 +134,7 @@ _POLISH_PROMPT = (
 )
 
 _TRANSLATE_PROMPT = (
-    "Translate the following dictated text to natural English. Fix obvious "
+    "Translate the following dictated text to natural {target}. Fix obvious "
     "speech-recognition errors while translating. Return only the "
     "translation, nothing else.\n\nText: {text}"
 )
@@ -157,6 +186,8 @@ def _llm_polish(text: str, cfg: FormatConfig) -> str:
     return polished
 
 
-def _llm_translate(text: str, cfg: FormatConfig) -> str:
-    translated = _llm_generate(_TRANSLATE_PROMPT.format(text=text), cfg)
+def _llm_translate(text: str, target: str, cfg: FormatConfig) -> str:
+    translated = _llm_generate(
+        _TRANSLATE_PROMPT.format(target=target, text=text), cfg
+    )
     return translated if translated is not None else text

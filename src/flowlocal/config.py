@@ -53,6 +53,10 @@ class FormatConfig:
     capitalize: bool = True
     # Optional LLM cleanup via a *localhost* Ollama server. Off by default.
     llm_enabled: bool = False
+    # Polish every utterance with the LLM. When false, the LLM is used only
+    # for explicit spoken commands ("переведи на ...", "translate to ...") —
+    # useful on slow machines where per-utterance polish costs seconds.
+    llm_polish: bool = True
     llm_url: str = "http://127.0.0.1:11434"
     llm_model: str = "llama3.2:3b"
     llm_timeout: float = 10.0

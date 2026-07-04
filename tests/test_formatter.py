@@ -97,3 +97,52 @@ def test_translate_command_inert_without_llm():
     cfg = FormatConfig(llm_enabled=False)
     out = format_text("переведи на английский привет мир", cfg)
     assert "переведи" in out.lower()  # phrase passes through untouched
+
+
+def test_translate_command_variants_and_targets(monkeypatch):
+    import flowlocal.formatter as f
+
+    prompts = []
+
+    def fake(prompt, cfg):
+        prompts.append(prompt)
+        return "translated"
+
+    monkeypatch.setattr(f, "_llm_generate", fake)
+    cfg = FormatConfig(llm_enabled=True)
+
+    assert format_text("Переведи фразу на английский, всё хорошо", cfg) == "translated"
+    assert "to natural English" in prompts[-1]
+
+    assert format_text("переведи на испанский, нужно внести правки", cfg) == "translated"
+    assert "to natural Spanish" in prompts[-1]
+
+    assert format_text("translate this to german, see you tomorrow", cfg) == "translated"
+    assert "to natural German" in prompts[-1]
+
+
+def test_unknown_target_language_is_normal_dictation(monkeypatch):
+    import flowlocal.formatter as f
+
+    monkeypatch.setattr(f, "_llm_generate", lambda p, c: None)
+    cfg = FormatConfig(llm_enabled=True)
+    out = format_text("переведи на марсианский, привет", cfg)
+    assert "марсианский" in out
+
+
+def test_llm_polish_flag_off_skips_polish_but_translates(monkeypatch):
+    import flowlocal.formatter as f
+
+    calls = []
+
+    def fake(prompt, cfg):
+        calls.append(prompt)
+        return "Hello"
+
+    monkeypatch.setattr(f, "_llm_generate", fake)
+    cfg = FormatConfig(llm_enabled=True, llm_polish=False)
+
+    assert format_text("привет мир", cfg) == "Привет мир"  # no LLM call
+    assert calls == []
+    assert format_text("переведи на английский, привет мир", cfg) == "Hello"
+    assert len(calls) == 1

@@ -26,6 +26,7 @@ beam_size = 1                 # 1 = greedy decoding, fastest; 5 = slower, slight
 remove_fillers = true
 capitalize = true
 llm_enabled = false           # optional polish via local Ollama
+llm_polish = true             # false = LLM only for spoken "переведи на ..." commands
 llm_url = "http://127.0.0.1:11434"  # localhost only — remote URLs are rejected
 llm_model = "llama3.2:3b"
 llm_timeout = 10.0
